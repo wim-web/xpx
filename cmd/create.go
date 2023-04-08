@@ -8,8 +8,10 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/ec2"
+	"github.com/aws/aws-sdk-go-v2/service/ec2/types"
 	"github.com/ktr0731/go-fuzzyfinder"
 	"github.com/spf13/cobra"
 )
@@ -31,13 +33,7 @@ var createCmd = &cobra.Command{
 		res, err := svc.DescribeVpcs(context.Background(), input)
 
 		if err != nil {
-			log.Fatalln("Failed to describe VPCs: ", err)
-		}
-
-		for _, vpc := range res.Vpcs {
-			for _, tag := range vpc.Tags {
-				fmt.Println(*tag.Key, *tag.Value)
-			}
+			log.Fatalln("failed to describe VPCs: ", err)
 		}
 
 		idx, err := fuzzyfinder.Find(
@@ -65,7 +61,24 @@ var createCmd = &cobra.Command{
 			log.Fatalln("unexpected error: ", err)
 		}
 
-		fmt.Println(*res.Vpcs[idx].VpcId)
+		vpc := res.Vpcs[idx]
+
+		res2, err := svc.DescribeInternetGateways(context.Background(), &ec2.DescribeInternetGatewaysInput{
+			Filters: []types.Filter{
+				{
+					Name:   aws.String("attachment.vpc-id"),
+					Values: []string{*vpc.VpcId},
+				},
+			},
+		})
+
+		if err != nil {
+			log.Fatalln("error describing internet gateways: ", err)
+		}
+
+		if len(res2.InternetGateways) < 1 {
+			log.Fatalln("selected vpc have no internet gateway")
+		}
 	},
 }
 
