@@ -1,21 +1,109 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CloudFormation template to create an ECS Fargate Spot Task with ecs-exec enabled"
+
+Parameters:
+  VpcId:
+    Description: "Enter the VPC ID where the ECS task should be created"
+    Type: "AWS::EC2::VPC::Id"
+
+  SubnetId:
+    Description: "Enter the Subnet ID where the ECS task should be created"
+    Type: "AWS::EC2::Subnet::Id"
+
 Resources:
-  VPC:
-    Type: AWS::EC2::VPC
-    Properties:
-      CidrBlock: 10.0.0.0/16
-      EnableDnsSupport: true
-      EnableDnsHostnames: true
+  FargateEcsCluster:
+    Type: "AWS::ECS::Cluster"
 
-  PublicSubnetA:
-    Type: AWS::EC2::Subnet
+  TaskRole:
+    Type: "AWS::IAM::Role"
     Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.0.0/24
-      AvailabilityZone: !Select [0, !GetAZs ""]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "ecs-tasks.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
 
-  PublicSubnetB:
-    Type: AWS::EC2::Subnet
+  TaskExecutionRole:
+    Type: "AWS::IAM::Role"
     Properties:
-      VpcId: !Ref VPC
-      CidrBlock: 10.0.1.0/24
-      AvailabilityZone: !Select [1, !GetAZs ""]
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - "ecs-tasks.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      ManagedPolicyArns:
+        - "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+        - "arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore"
+
+  TaskDefinition:
+    Type: "AWS::ECS::TaskDefinition"
+    Properties:
+      Family: "fargate-task-definition"
+      NetworkMode: "awsvpc"
+      RequiresCompatibilities:
+        - "FARGATE"
+      ExecutionRoleArn: !Ref TaskExecutionRole
+      TaskRoleArn: !Ref TaskRole
+      Cpu: "256"
+      Memory: "0.5GB"
+      ContainerDefinitions:
+        - Name: "lightweight-container"
+          Image: "busybox:latest"
+          Essential: true
+          Command:
+            - "sh"
+            - "-c"
+            - "tail -f /dev/null"
+          LogConfiguration:
+            LogDriver: "awslogs"
+            Options:
+              "awslogs-region": !Ref "AWS::Region"
+              "awslogs-group": !Ref ContainerLogGroup
+              "awslogs-stream-prefix": "ecs"
+
+  ContainerLogGroup:
+    Type: "AWS::Logs::LogGroup"
+    Properties:
+      LogGroupName: "/ecs/lightweight-container"
+      RetentionInDays: "7"
+
+  FargateService:
+    Type: "AWS::ECS::Service"
+    Properties:
+      Cluster: !Ref FargateEcsCluster
+      EnableExecuteCommand: true
+      LaunchType: "FARGATE"
+      TaskDefinition: !Ref TaskDefinition
+      DesiredCount: "1"
+      DeploymentController:
+        Type: "ECS"
+      EnableECSManagedTags: true
+      PropagateTags: "TASK_DEFINITION"
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: "ENABLED"
+          Subnets:
+            - !Ref SubnetId
+          SecurityGroups:
+            - !Ref EcsSecurityGroup
+
+  EcsSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: "ECS Security Group"
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+        - IpProtocol: "tcp"
+          FromPort: "22"
+          ToPort: "22"
+          CidrIp: "0.0.0.0/0"

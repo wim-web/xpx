@@ -84,9 +84,35 @@ var createCmd = &cobra.Command{
 			log.Fatalln("selected vpc have no internet gateway")
 		}
 
+		response, err := svc.DescribeRouteTables(context.Background(), &ec2.DescribeRouteTablesInput{
+			Filters: []types.Filter{
+				{
+					Name:   aws.String("vpc-id"),
+					Values: []string{*vpc.VpcId},
+				},
+				{
+					Name:   aws.String("route.destination-cidr-block"),
+					Values: []string{"0.0.0.0/0"},
+				},
+				{
+					Name:   aws.String("route.gateway-id"),
+					Values: []string{*res2.InternetGateways[0].InternetGatewayId},
+				},
+			},
+		})
+		if err != nil {
+			log.Fatalln("failed to describe route tables: ", err)
+		}
+
+		if len(response.RouteTables) < 1 {
+			log.Fatalln("no route table attached with internet gateway")
+		}
+
+		subnetId := *response.RouteTables[0].Associations[0].SubnetId
+
 		client := cloudformation.NewFromConfig(cfg)
 
-		createFromStack(client)
+		createFromStack(client, vpc.VpcId, &subnetId)
 	},
 }
 
@@ -94,7 +120,7 @@ func init() {
 	rootCmd.AddCommand(createCmd)
 }
 
-func createFromStack(svc *cloudformation.Client) {
+func createFromStack(svc *cloudformation.Client, vpcId *string, subnetId *string) {
 	stackName := "temp"
 	templateFile := "network.yaml"
 
@@ -106,11 +132,24 @@ func createFromStack(svc *cloudformation.Client) {
 	input := &cloudformation.CreateStackInput{
 		StackName:    aws.String(stackName),
 		TemplateBody: aws.String(string(template)),
+		Capabilities: []c_types.Capability{
+			c_types.CapabilityCapabilityIam,
+		},
+		Parameters: []c_types.Parameter{
+			{
+				ParameterKey:   aws.String("VpcId"),
+				ParameterValue: vpcId,
+			},
+			{
+				ParameterKey:   aws.String("SubnetId"),
+				ParameterValue: subnetId,
+			},
+		},
 	}
 
 	_, err = svc.CreateStack(context.Background(), input)
 	if err != nil {
-		log.Fatalf("unable to create stack, %v")
+		log.Fatalf("unable to create stack, %v", err)
 	}
 
 	fmt.Printf("Stack %s has been created successfully.\n", stackName)
@@ -145,7 +184,7 @@ func waitForStackCompletion(client *cloudformation.Client, stackName string) {
 		}
 
 		// Sleep for a while before polling again
-		fmt.Println("!")
+		fmt.Print(".")
 		time.Sleep(3 * time.Second)
 	}
 }
