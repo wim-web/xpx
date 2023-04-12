@@ -13,6 +13,13 @@ Parameters:
 Resources:
   FargateEcsCluster:
     Type: "AWS::ECS::Cluster"
+    Properties:
+      CapacityProviders:
+        - FARGATE_SPOT
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE_SPOT
+          Base: 1
+          Weight: 1
 
   TaskRole:
     Type: "AWS::IAM::Role"
@@ -82,7 +89,6 @@ Resources:
     Properties:
       Cluster: !Ref FargateEcsCluster
       EnableExecuteCommand: true
-      LaunchType: "FARGATE"
       TaskDefinition: !Ref TaskDefinition
       DesiredCount: "1"
       DeploymentController:
