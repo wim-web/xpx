@@ -14,6 +14,7 @@ Resources:
   FargateEcsCluster:
     Type: "AWS::ECS::Cluster"
     Properties:
+      ClusterName: !Sub "${AWS::StackName}"
       CapacityProviders:
         - FARGATE_SPOT
       DefaultCapacityProviderStrategy:
@@ -24,6 +25,7 @@ Resources:
   TaskRole:
     Type: "AWS::IAM::Role"
     Properties:
+      RoleName: !Sub "${AWS::StackName}-TaskRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -39,6 +41,7 @@ Resources:
   TaskExecutionRole:
     Type: "AWS::IAM::Role"
     Properties:
+      RoleName: !Sub "${AWS::StackName}-ExecRole"
       AssumeRolePolicyDocument:
         Version: "2012-10-17"
         Statement:
@@ -55,7 +58,7 @@ Resources:
   TaskDefinition:
     Type: "AWS::ECS::TaskDefinition"
     Properties:
-      Family: "fargate-task-definition"
+      Family: !Sub "${AWS::StackName}"
       NetworkMode: "awsvpc"
       RequiresCompatibilities:
         - "FARGATE"
@@ -64,7 +67,7 @@ Resources:
       Cpu: "256"
       Memory: "0.5GB"
       ContainerDefinitions:
-        - Name: "lightweight-container"
+        - Name: "bastion"
           Image: "busybox:latest"
           Essential: true
           Command:
@@ -80,13 +83,15 @@ Resources:
 
   ContainerLogGroup:
     Type: "AWS::Logs::LogGroup"
+    # DeletionPolicy: Retain
     Properties:
-      LogGroupName: "/ecs/lightweight-container"
-      RetentionInDays: "7"
+      LogGroupName: !Sub "/ecs/bastion/${AWS::StackName}"
+      RetentionInDays: "3"
 
   FargateService:
     Type: "AWS::ECS::Service"
     Properties:
+      ServiceName: !Sub "${AWS::StackName}-Service"
       Cluster: !Ref FargateEcsCluster
       EnableExecuteCommand: true
       TaskDefinition: !Ref TaskDefinition
@@ -106,10 +111,6 @@ Resources:
   EcsSecurityGroup:
     Type: "AWS::EC2::SecurityGroup"
     Properties:
+      GroupName: !Sub "${AWS::StackName}"
       GroupDescription: "ECS Security Group"
       VpcId: !Ref VpcId
-      SecurityGroupIngress:
-        - IpProtocol: "tcp"
-          FromPort: "22"
-          ToPort: "22"
-          CidrIp: "0.0.0.0/0"

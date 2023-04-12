@@ -121,7 +121,8 @@ func init() {
 }
 
 func createFromStack(svc *cloudformation.Client, vpcId *string, subnetId *string) {
-	stackName := "temp"
+	now := time.Now()
+	stackName := fmt.Sprintf("%s-%s", "xpx", now.Format("20060102150405"))
 	templateFile := "network.yaml"
 
 	template, err := ioutil.ReadFile(templateFile)
@@ -133,7 +134,7 @@ func createFromStack(svc *cloudformation.Client, vpcId *string, subnetId *string
 		StackName:    aws.String(stackName),
 		TemplateBody: aws.String(string(template)),
 		Capabilities: []c_types.Capability{
-			c_types.CapabilityCapabilityIam,
+			c_types.CapabilityCapabilityNamedIam,
 		},
 		Parameters: []c_types.Parameter{
 			{
