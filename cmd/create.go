@@ -131,6 +131,9 @@ func createFromStack(svc *cloudformation.Client, vpcId *string, subnetId *string
 	}
 
 	input := &cloudformation.CreateStackInput{
+		Tags: []c_types.Tag{
+			{Key: aws.String("CreatedBy"), Value: aws.String("xpx")},
+		},
 		StackName:    aws.String(stackName),
 		TemplateBody: aws.String(string(template)),
 		Capabilities: []c_types.Capability{
