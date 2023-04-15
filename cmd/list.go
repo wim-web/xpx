@@ -47,7 +47,7 @@ var listCmd = &cobra.Command{
 
 			for _, tag := range tags {
 				if *tag.Key == "CreatedBy" && *tag.Value == "xpx" {
-					fmt.Println(*stack.StackName)
+					fmt.Printf("%s | %s\n", *stack.StackName, *stack.StackId)
 				}
 			}
 		}

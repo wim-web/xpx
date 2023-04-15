@@ -183,6 +183,9 @@ func waitForStackCompletion(client *cloudformation.Client, stackName string) {
 			return
 		case c_types.StackStatusCreateInProgress:
 			// Continue polling
+		case c_types.StackStatusDeleteInProgress:
+		case c_types.StackStatusDeleteComplete:
+			return
 		default:
 			log.Fatalf("Stack creation failed with status: %s", stack.StackStatus)
 		}
