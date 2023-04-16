@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"os/signal"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -43,7 +46,7 @@ func TunnelHandler(host string, localPort int) error {
 		return errors.New("unable to read CloudFormation template file")
 	}
 
-	outputs, err := myaws.CreateFromStack(stackName, string(template), []cf_types.Parameter{
+	stackId, outputs, err := myaws.CreateFromStack(stackName, string(template), []cf_types.Parameter{
 		{
 			ParameterKey:   aws.String("VpcId"),
 			ParameterValue: aws.String(s.VpcId()),
@@ -75,7 +78,11 @@ func TunnelHandler(host string, localPort int) error {
 		}
 	}
 
-	return command.PortForwardCommand(
+	ctx := context.Background()
+	ch := make(chan string, 1)
+
+	cmd, err := command.PortForwardCommand(
+		ctx,
 		sp,
 		clusterName,
 		taskId,
@@ -88,6 +95,35 @@ func TunnelHandler(host string, localPort int) error {
 			"host":            {host},
 		},
 	)
+
+	if err != nil {
+		return err
+	}
+
+	go func() {
+		err := cmd.Run()
+		if err != nil {
+			ch <- err.Error()
+			return
+		}
+		close(ch)
+	}()
+
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTSTP)
+
+	go func() {
+		<-sigCh
+		cmd.Cancel()
+	}()
+
+	<-ch
+
+	fmt.Println("delete resources...")
+
+	err = DeleteHandler(stackId)
+
+	return err
 }
 
 func getEcsInfo(outputs []types.Output) (string, string, string, error) {
