@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/signal"
 	"strconv"
@@ -23,7 +22,7 @@ import (
 	"github.com/wim-web/xpx/internal/server"
 )
 
-func TunnelHandler(host string, localPort int) error {
+func TunnelHandler(host string, localPort int, template string) error {
 	s, err := server.CreateTargetServer(host)
 
 	if err != nil {
@@ -38,15 +37,12 @@ func TunnelHandler(host string, localPort int) error {
 
 	now := time.Now()
 	stackName := fmt.Sprintf("%s-%s", "xpx", now.Format("20060102150405"))
-	templateFile := "network.yaml"
-
-	template, err := ioutil.ReadFile(templateFile)
 
 	if err != nil {
 		return errors.New("unable to read CloudFormation template file")
 	}
 
-	stackId, outputs, err := myaws.CreateFromStack(stackName, string(template), []cf_types.Parameter{
+	stackId, outputs, err := myaws.CreateFromStack(stackName, template, []cf_types.Parameter{
 		{
 			ParameterKey:   aws.String("VpcId"),
 			ParameterValue: aws.String(s.VpcId()),

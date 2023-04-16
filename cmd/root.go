@@ -1,10 +1,15 @@
 package cmd
 
 import (
+	"io/ioutil"
+	"log"
 	"os"
 
 	"github.com/spf13/cobra"
 )
+
+//go:enmbed network.yaml
+var cloudformationFile string
 
 var rootCmd = &cobra.Command{
 	Use:   "xpx",
@@ -19,4 +24,11 @@ func Execute() {
 }
 
 func init() {
+	if cloudformationFile == "" {
+		template, err := ioutil.ReadFile("network.yaml")
+		if err != nil {
+			log.Fatalln(err)
+		}
+		cloudformationFile = string(template)
+	}
 }

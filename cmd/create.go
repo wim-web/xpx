@@ -15,7 +15,7 @@ var createCmd = &cobra.Command{
 	Use:   "create",
 	Short: "create tunnel server",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := handler.CreateHandler()
+		err := handler.CreateHandler(cloudformationFile)
 
 		if err != nil {
 			log.Fatalln(err)

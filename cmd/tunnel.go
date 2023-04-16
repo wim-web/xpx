@@ -25,7 +25,7 @@ var tunnelCmd = &cobra.Command{
 	Use:   "tunnel",
 	Short: "easy tunnel",
 	Run: func(cmd *cobra.Command, args []string) {
-		err := handler.TunnelHandler(host, localPort)
+		err := handler.TunnelHandler(host, localPort, cloudformationFile)
 
 		if err != nil {
 			log.Fatalln(err)

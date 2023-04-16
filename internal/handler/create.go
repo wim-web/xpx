@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -16,7 +15,7 @@ import (
 	"github.com/wim-web/xpx/internal/view"
 )
 
-func CreateHandler() error {
+func CreateHandler(template string) error {
 	vpc, err := selectVpc()
 
 	if err != nil {
@@ -31,15 +30,12 @@ func CreateHandler() error {
 
 	now := time.Now()
 	stackName := fmt.Sprintf("%s-%s", "xpx", now.Format("20060102150405"))
-	templateFile := "network.yaml"
-
-	template, err := ioutil.ReadFile(templateFile)
 
 	if err != nil {
 		return errors.New("unable to read CloudFormation template file")
 	}
 
-	myaws.CreateFromStack(stackName, string(template), []cf_types.Parameter{
+	myaws.CreateFromStack(stackName, template, []cf_types.Parameter{
 		{
 			ParameterKey:   aws.String("VpcId"),
 			ParameterValue: vpc.VpcId,
