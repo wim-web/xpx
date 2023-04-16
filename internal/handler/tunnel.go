@@ -59,8 +59,6 @@ func TunnelHandler(host string, localPort int, template string) error {
 
 	clusterName, taskId, containerId, err := getEcsInfo(outputs)
 
-	fmt.Println(clusterName, taskId, containerId)
-
 	if err != nil {
 		return err
 	}
