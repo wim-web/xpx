@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	_ "embed"
 	"io/ioutil"
 	"log"
 	"os"
@@ -8,7 +9,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-//go:enmbed network.yaml
+//go:embed network.yaml
 var cloudformationFile string
 
 var rootCmd = &cobra.Command{
