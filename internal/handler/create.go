@@ -23,13 +23,7 @@ func CreateHandler() error {
 		return err
 	}
 
-	igw, err := getInternetGW(*vpc.VpcId)
-
-	if err != nil {
-		return err
-	}
-
-	subnetIds, err := getPublicSubnetIds(*vpc.VpcId, *igw.InternetGatewayId)
+	subnetIds, err := myaws.PublicSubnetIdsFromVpcId(*vpc.VpcId)
 
 	if err != nil {
 		return err
@@ -85,60 +79,4 @@ func selectVpc() (vpc ec2_types.Vpc, err error) {
 	)
 
 	return finder.Find()
-}
-
-func getInternetGW(vpcId string) (igw ec2_types.InternetGateway, err error) {
-	ec2Svc := ec2.NewFromConfig(myaws.Cfg)
-
-	describeInternetGatewaysOutput, err := ec2Svc.DescribeInternetGateways(context.Background(), &ec2.DescribeInternetGatewaysInput{
-		Filters: []ec2_types.Filter{
-			{
-				Name:   aws.String("attachment.vpc-id"),
-				Values: []string{vpcId},
-			},
-		},
-	})
-
-	if err != nil {
-		return igw, errors.New("failed to describe internet gateway")
-	}
-
-	if len(describeInternetGatewaysOutput.InternetGateways) < 1 {
-		return igw, errors.New("selected vpc have no internet gateway")
-	}
-
-	igw = describeInternetGatewaysOutput.InternetGateways[0]
-
-	return
-}
-
-func getPublicSubnetIds(vpcId string, igwId string) ([]string, error) {
-	ec2Svc := ec2.NewFromConfig(myaws.Cfg)
-
-	describeRouteTablesOutput, err := ec2Svc.DescribeRouteTables(context.Background(), &ec2.DescribeRouteTablesInput{
-		Filters: []ec2_types.Filter{
-			{
-				Name:   aws.String("vpc-id"),
-				Values: []string{vpcId},
-			},
-			{
-				Name:   aws.String("route.destination-cidr-block"),
-				Values: []string{"0.0.0.0/0"},
-			},
-			{
-				Name:   aws.String("route.gateway-id"),
-				Values: []string{igwId},
-			},
-		},
-	})
-
-	if err != nil {
-		return nil, errors.New("failed to describe route tables")
-	}
-
-	if len(describeRouteTablesOutput.RouteTables) < 1 {
-		return nil, errors.New("no route table attached with internet gateway")
-	}
-
-	return []string{*describeRouteTablesOutput.RouteTables[0].Associations[0].SubnetId}, nil
 }

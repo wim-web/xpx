@@ -114,3 +114,11 @@ Resources:
       GroupName: !Sub "${AWS::StackName}"
       GroupDescription: "ECS Security Group"
       VpcId: !Ref VpcId
+
+Outputs:
+  ClusterName:
+    Value: !Ref FargateEcsCluster
+
+  ServiceName:
+    Description: "The name of the created ECS service"
+    Value: !Ref FargateService

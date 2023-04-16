@@ -17,10 +17,10 @@ var (
 )
 
 func IsCreatedFromXpx(t types.Tag) bool {
-	return t.Key == CloudformationTagKey && t.Value == CloudformationTagValue
+	return *t.Key == *CloudformationTagKey && *t.Value == *CloudformationTagValue
 }
 
-func CreateFromStack(stackName string, templateBody string, parameters []types.Parameter) error {
+func CreateFromStack(stackName string, templateBody string, parameters []types.Parameter) ([]types.Output, error) {
 	cfSvc := cloudformation.NewFromConfig(Cfg)
 
 	input := &cloudformation.CreateStackInput{
@@ -38,12 +38,24 @@ func CreateFromStack(stackName string, templateBody string, parameters []types.P
 	_, err := cfSvc.CreateStack(context.Background(), input)
 
 	if err != nil {
-		return errors.New("failed to create stack")
+		return nil, errors.New("failed to create stack")
 	}
 
 	err = WaitForStackCompletion(stackName)
 
-	return err
+	if err != nil {
+		return nil, err
+	}
+
+	describeStacksOutput, err := cfSvc.DescribeStacks(context.Background(), &cloudformation.DescribeStacksInput{
+		StackName: aws.String(stackName),
+	})
+
+	if err != nil {
+		return nil, errors.New("failed to describe stack")
+	}
+
+	return describeStacksOutput.Stacks[0].Outputs, err
 }
 
 func WaitForStackCompletion(stackName string) error {
