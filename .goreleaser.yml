@@ -1,0 +1,16 @@
+---
+project_name: xpx
+archives:
+  - name_template: "{{.ProjectName}}_{{.Os}}_{{.Arch}}"
+before:
+  hooks:
+    - go mod tidy
+builds:
+  - binary: xpx
+    main: main.go
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
