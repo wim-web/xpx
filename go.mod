@@ -11,7 +11,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/rds v1.43.0
 	github.com/aws/aws-sdk-go-v2/service/ssm v1.37.5
 	github.com/ktr0731/go-fuzzyfinder v0.7.0
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 )
 
 require github.com/wim-web/tonneeeeel v0.4.0
