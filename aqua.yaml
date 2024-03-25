@@ -8,7 +8,7 @@
 #   - all
 registries:
   - type: standard
-    ref: v3.150.0 # renovate: depName=aquaproj/aqua-registry
+    ref: v4.155.1 # renovate: depName=aquaproj/aqua-registry
 packages:
   - name: spf13/cobra-cli@v1.3.0
   - name: golang/go@go1.21.3
